@@ -44,20 +44,20 @@ void op_srl(R_PARAM_SHIFT)
 //I-type operations: (rt, rs, imm)
 void op_addiu(I_PARAM)
 {
-	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + imm;
+	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (unsigned short)imm;
 }
 void op_beq(I_PARAM)
 {
 	if(CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt])
 	{
-		CURRENT_STATE.PC += 4*imm;
+		CURRENT_STATE.PC += 4*int(imm);
 	}
 }
 void op_bne(I_PARAM)
 {
 	if(CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt])
 	{
-		CURRENT_STATE.PC += 4*imm;
+		CURRENT_STATE.PC += 4*int(imm);
 	}
 }
 void op_lw(I_PARAM)
@@ -66,7 +66,7 @@ void op_lw(I_PARAM)
 }
 void op_sltiu(I_PARAM)
 {
-	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] < imm;
+	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] < (unsigned short)imm;
 }
 void op_sw(I_PARAM)
 {
@@ -74,7 +74,7 @@ void op_sw(I_PARAM)
 }
 void op_lui(I_PARAM)
 {
-	CURRENT_STATE.REGS[rt] = imm << 16;
+	CURRENT_STATE.REGS[rt] = int(imm) << 16;
 }
 void op_ori(I_PARAM)
 {
