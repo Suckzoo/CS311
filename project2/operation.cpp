@@ -78,11 +78,14 @@ void op_lui(I_PARAM)
 }
 void op_ori(I_PARAM)
 {
-	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] | imm;
+	// upper 16 bit's imm must be 0
+	int tmp = imm & 0x0000FFFF;
+	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] | tmp;
 }
 void op_andi(I_PARAM)
 {
-	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] & imm;
+	int tmp = imm & 0x0000FFFF;
+	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] & tmp;
 }
 
 //J-type operations: (target)
