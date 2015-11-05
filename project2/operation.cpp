@@ -82,10 +82,12 @@ void op_ori(I_PARAM)
 //J-type operations: (target)
 void op_j(J_PARAM)
 {
-	CURRENT_STATE.PC = target * 4;
+	CURRENT_STATE.PC &= 0xF0000000
+	CURRENT_STATE.PC |= target * 4;
 }
 void op_jal(J_PARAM)
 {
 	CURRENT_STATE.REG[31] = CURRENT_STATE.PC + 4;
-	CURRENT_STATE.PC = target * 4;
+	CURRENT_STATE.PC &= 0xF0000000
+	CURRENT_STATE.PC |= target * 4;
 }
