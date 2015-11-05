@@ -129,12 +129,12 @@ void parsing_data(const char *buffer, const int index) {
 	for(int k = 0; k < 4; k++)
 	{
 		uint8_t byte = 0; 
-		for(int i = 0; i < 8; i++)
+		for(int i = 8 * k + 0; i < 8 * k + 8; i++)
 		{
 			byte <<= 1;
 			byte |= (buffer[i] - '0');
 		}
-		word |= (byte << (8 * k));
+		word |= (byte << (8 * (3-k)));
 	}
 	mem_write_32(MEM_DATA_START + index, word);
 }

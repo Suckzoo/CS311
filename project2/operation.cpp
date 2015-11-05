@@ -44,7 +44,7 @@ void op_srl(R_PARAM_SHIFT)
 //I-type operations: (rt, rs, imm)
 void op_addiu(I_PARAM)
 {
-	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (unsigned short)imm;
+	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + (uint32_t)imm;
 }
 void op_beq(I_PARAM)
 {
@@ -62,7 +62,7 @@ void op_bne(I_PARAM)
 }
 void op_lw(I_PARAM)
 {
-	CURRENT_STATE.REGS[rt] = mem_read_32(rs + imm);
+	CURRENT_STATE.REGS[rt] = mem_read_32(CURRENT_STATE.REGS[rs] + imm);
 }
 void op_sltiu(I_PARAM)
 {
@@ -70,7 +70,7 @@ void op_sltiu(I_PARAM)
 }
 void op_sw(I_PARAM)
 {
-	mem_write_32(rs + imm, CURRENT_STATE.REGS[rt]);
+	mem_write_32(CURRENT_STATE.REGS[rs] + imm, CURRENT_STATE.REGS[rt]);
 }
 void op_lui(I_PARAM)
 {
@@ -79,6 +79,10 @@ void op_lui(I_PARAM)
 void op_ori(I_PARAM)
 {
 	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] | imm;
+}
+void op_andi(I_PARAM)
+{
+	CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] & imm;
 }
 
 //J-type operations: (target)
@@ -89,7 +93,7 @@ void op_j(J_PARAM)
 }
 void op_jal(J_PARAM)
 {
-	CURRENT_STATE.REG[31] = CURRENT_STATE.PC + 4;
+	CURRENT_STATE.REGS[31] = CURRENT_STATE.PC;
 	CURRENT_STATE.PC &= 0xF0000000;
 	CURRENT_STATE.PC |= target * 4;
 }

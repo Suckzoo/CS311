@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include "util.h"
+#include "operation.h"
 /* functions */
 void		process_instruction();
 

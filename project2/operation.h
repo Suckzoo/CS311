@@ -23,6 +23,7 @@ void op_srl(R_PARAM_SHIFT);
 
 //I-type operations
 void op_addiu(I_PARAM);
+void op_andi(I_PARAM);
 void op_beq(I_PARAM);
 void op_bne(I_PARAM);
 void op_lw(I_PARAM);
