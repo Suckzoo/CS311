@@ -31,9 +31,87 @@ if_id_reg run_IF(){
 
     // default
     reg.PC = CURRENT_STATE.PC;
-    reg.NPC = CURRENT_STATE.PC + 4;
+    reg.NPC = CURRENT_STATE.PC + BYTES_PER_WORD;
     reg.instr = INST_INFO[(CURRENT_STATE.PC - MEM_TEXT_START) >> 2];
     return reg
+}
+
+id_ex_reg run_ID(){
+    id_ex_reg reg;
+    if_id_mem IF_ID = CURRENT_STATE.IF_ID;
+
+    instruction instr = IF_ID.instr;
+    short op = instr.opcode;
+    short func_code = instr.func_code;
+
+    // fill register
+    reg.NPC = IF_ID.NPC + ;
+    reg.rs = instr.r_t.r_i.rs;
+    reg.rt = instr.r_t.r_i.rt;
+    reg.rd = instr.r_t.r_i.r_i.r.rd;
+
+    reg.imm = instr.r_t.r_i.r_i.imm;
+    if (op == 0x0c || op == 0x0d)
+        reg.imm &= 0x0000ffff;
+    reg.shamt = instr.r_t.r_i.r_i.r.shamt;
+
+    reg.readV1 = CURRENT_STATE.REGS[reg.rs];
+    reg.readV2 = CURRENT_STATE.REGS[reg.rt];
+
+
+    // control bit~
+    switch(op){
+        case 0x23: // lw
+        case 0x2b: // sw
+        case 0x09: // add
+            reg.cALUOp = 0; // add
+            break;
+        case 0x0c: // andi
+            reg.cALUOp = 1;
+            break;
+        case 0x0d: // ori
+            reg.cALUOp = 2;
+            break;
+        case 0x04: // beq
+            reg.cALUOp = 3; // subst.
+            break;
+        case 0x05: // bne
+            reg.cALUOp = 4; // minus with inv 0
+            break;
+        case 0x0b: // sltiu
+            reg.cALUOp = 5;
+            break;
+        case 0x0f: // lui
+            reg.cALUOp = 6;
+            break;
+        case 0x03 // jal
+            reg.cALUOp = 7;
+            break;
+        case 0x00: // R
+            if(func_code==0x00) // sll
+                reg.cALUOp = 8;
+            else if(func_code==0x02) // srl
+                reg.cALUOp = 9;
+            else if(func_code==0x21) // addu
+                reg.cALUOp = 0;
+            else if(func_code==0x23) // subu
+                reg.cALUOp = 3;
+            else if(func_code==0x24) // and
+                reg.cALUOp = 1;
+            else if(func_code==0x25) // or
+                reg.cALUOp = 2;
+            else if(func_code==0x27) // nor
+                reg.cALUOp = 10;
+            else if(func_code==0x2b) // sltu
+                reg.cALUOp = 5;
+            else
+                printf("INVALID FUNC CODE\n");
+            break;
+        default:
+            printf("INVALID OP CODE\n");
+    }
+
+    // ALUSrc
 }
 
 
@@ -69,7 +147,7 @@ void process_instruction(){
     CURRENT_STATE.MEM_WB = MEM_WB;
     
 
-    /*
+    
     // fetch
     inst = get_inst_info(CURRENT_STATE.PC);
     CURRENT_STATE.PC += BYTES_PER_WORD;

@@ -74,6 +74,7 @@ typedef struct id_ex {
     uint32_t readV1;
     uint32_t readV2;
 
+    unsigned char shamt;
     uint32_t imm;
     unsigned char rs;
     unsigned char rt;
