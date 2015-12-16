@@ -37,6 +37,7 @@ if_id_reg run_IF(){
 }
 
 id_ex_reg run_ID(){
+    // TODO bubble, hazard, flush, jump
     id_ex_reg reg;
     if_id_mem IF_ID = CURRENT_STATE.IF_ID;
 
@@ -112,6 +113,27 @@ id_ex_reg run_ID(){
     }
 
     // ALUSrc
+    switch(op){
+        case 0x09:
+        case 0x0b:
+        case 0x0c:
+        case 0x0d:
+        case 0x0f:
+        case 0x23:
+        case 0x2b: // addiu, sltiu, ori, andi, lui, lw, sw 
+            reg.cALUSrc = 1;
+            break;
+        default:
+            reg.cALUSrc = 0;
+    }
+
+    reg.cRegDst = (op == 0x00 || op == 0x03);
+    reg.cBranch = (op == 0x04 || op == 0x05);
+    reg.cRegWrt = !(op == 0x2b || op == 0x04 || op == 0x05);
+    reg.cMem2Reg = (op == 0x23);
+
+    reg.PC = IF_ID.PC;
+    return reg;
 }
 
 
