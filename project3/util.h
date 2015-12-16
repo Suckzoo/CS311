@@ -34,6 +34,68 @@ typedef struct CPU_State_Struct {
     uint32_t PIPE[PIPE_STAGE];	/* pipeline stage */
 } CPU_State;
 
+// Register Design From 'Computer Organization And Design'(P&H) 5th edition
+typedef struct if_id {
+    uint32_t NPC;
+    instruction instr;
+} if_id_reg;
+
+typedef struct id_ex {
+    uint32_t NPC;
+
+    uint32_t readV1;
+    uint32_t readV2;
+
+    uint32_t imm;
+    unsigned char rs;
+    unsigned char rt;
+    unsigned char rd;
+
+    // c for 'Control'
+    
+    // EX Control
+    char cALUSrc;
+    char cALUOp;
+    char cRegDst;
+
+    // MEM Control
+    char cMemWrt;
+    char cMemRd;
+    char cBranch;
+
+    // WB Control
+    char cMem2Reg;
+    char cRegWrt;
+} id_ex_reg;
+
+typedef struct ex_mem {
+    uint32_t ALUResult;
+    uint32_t addrResult;
+    uint32_t wrtData;
+    unsigned char wrtAddr;
+
+    // MEM Control
+    char cALUBranch;
+    char cMemWrt;
+    char cMemRd;
+    char cBranch;
+
+    // WB Control
+    char cMem2Reg;
+    char cRegWrt;
+} ex_mem_reg;
+
+typedef struct mem_wb
+{
+    uint32_t ALUResult;
+    unsigned char wrtAddr;
+    uint32_t memV; // Read data from memory
+
+    // WB Control
+    char cMem2Reg;
+    char cRegWrt;
+} mem_wb_reg;
+
 typedef struct inst_s {
     short opcode;
     
