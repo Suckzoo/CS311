@@ -1,0 +1,35 @@
+#!/bin/bash
+
+./generator.py 100000
+
+./cs311cache -c 4:1:4 -x trace > out
+./cs311cachetest -c 4:1:4 -x trace > out.test
+cmp --silent out out.test || echo "different 4:1:4"
+
+./cs311cache -c 32:4:4 -x trace > out
+./cs311cachetest -c 32:4:4 -x trace > out.test
+cmp --silent out out.test || echo "different 32:4:4"
+
+./cs311cache -c 512:4:4 -x trace > out
+./cs311cachetest -c 512:4:4 -x trace > out.test
+cmp --silent out out.test || echo "different 512:4:4"
+
+./cs311cache -c 512:4:16 -x trace > out
+./cs311cachetest -c 512:4:16 -x trace > out.test
+cmp --silent out out.test || echo "different 512:4:16"
+
+./cs311cache -c 512:8:32 -x trace > out
+./cs311cachetest -c 512:8:32 -x trace > out.test
+cmp --silent out out.test || echo "different 512:8:32"
+
+./cs311cache -c 4096:1:4 -x trace > out
+./cs311cachetest -c 4096:1:4 -x trace > out.test
+cmp --silent out out.test || echo "different 4096:1:4"
+
+./cs311cache -c 4096:1:32 -x trace > out
+./cs311cachetest -c 4096:1:32 -x trace > out.test
+cmp --silent out out.test || echo "different 4096:1:32"
+
+./cs311cache -c 4096:16:8 -x trace > out
+./cs311cachetest -c 4096:16:8 -x trace > out.test
+cmp --silent out out.test || echo "different 4096:16:8"
