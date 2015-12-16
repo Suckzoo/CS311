@@ -28,19 +28,47 @@
 #define BYTES_PER_WORD	4
 #define PIPE_STAGE	5
 
-typedef struct CPU_State_Struct {
-    uint32_t PC;		/* program counter */
-    uint32_t REGS[MIPS_REGS];	/* register file */
-    uint32_t PIPE[PIPE_STAGE];	/* pipeline stage */
-} CPU_State;
+typedef struct inst_s {
+    short opcode;
+    
+    /*R-type*/
+    short func_code;
+
+    union {
+        /* R-type or I-type: */
+        struct {
+        unsigned char rs;
+        unsigned char rt;
+
+        union {
+            short imm;
+
+            struct {
+            unsigned char rd;
+            unsigned char shamt;
+        } r;
+        } r_i;
+    } r_i;
+        /* J-type: */
+        uint32_t target;
+    } r_t;
+
+    uint32_t value;
+    
+    //int32 encoding;
+    //imm_expr *expr;
+    //char *source_line;
+} instruction;
 
 // Register Design From 'Computer Organization And Design'(P&H) 5th edition
 typedef struct if_id {
+    uint32_t PC;
     uint32_t NPC;
     instruction instr;
 } if_id_reg;
 
 typedef struct id_ex {
+    uint32_t PC;
     uint32_t NPC;
 
     uint32_t readV1;
@@ -52,7 +80,6 @@ typedef struct id_ex {
     unsigned char rd;
 
     // c for 'Control'
-    
     // EX Control
     char cALUSrc;
     char cALUOp;
@@ -69,6 +96,8 @@ typedef struct id_ex {
 } id_ex_reg;
 
 typedef struct ex_mem {
+    uint32_t PC;
+
     uint32_t ALUResult;
     uint32_t addrResult;
     uint32_t wrtData;
@@ -87,6 +116,8 @@ typedef struct ex_mem {
 
 typedef struct mem_wb
 {
+    uint32_t PC;
+
     uint32_t ALUResult;
     unsigned char wrtAddr;
     uint32_t memV; // Read data from memory
@@ -96,37 +127,16 @@ typedef struct mem_wb
     char cRegWrt;
 } mem_wb_reg;
 
-typedef struct inst_s {
-    short opcode;
-    
-    /*R-type*/
-    short func_code;
-
-    union {
-        /* R-type or I-type: */
-        struct {
-	    unsigned char rs;
-	    unsigned char rt;
-
-	    union {
-	        short imm;
-
-	        struct {
-		    unsigned char rd;
-		    unsigned char shamt;
-		} r;
-	    } r_i;
-	} r_i;
-        /* J-type: */
-        uint32_t target;
-    } r_t;
-
-    uint32_t value;
-    
-    //int32 encoding;
-    //imm_expr *expr;
-    //char *source_line;
-} instruction;
+typedef struct CPU_State_Struct {
+    uint32_t PC;        /* program counter */
+    uint32_t REGS[MIPS_REGS];   /* register file */
+    uint32_t PIPE[PIPE_STAGE];  /* pipeline stage */
+    // Custumize
+    if_id_reg IF_ID;
+    id_ex_reg ID_EX;
+    ex_mem_reg EX_MEM;
+    mem_wb_reg MEM_WB;
+} CPU_State;
 
 typedef struct {
     uint32_t start, size;

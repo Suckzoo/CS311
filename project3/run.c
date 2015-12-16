@@ -24,6 +24,19 @@ instruction* get_inst_info(uint32_t pc)
     return &INST_INFO[(pc - MEM_TEXT_START) >> 2];
 }
 
+// FETCH
+if_id_reg run_IF(){
+    // TODO: Bubble & Flush
+    if_id_reg reg;
+
+    // default
+    reg.PC = CURRENT_STATE.PC;
+    reg.NPC = CURRENT_STATE.PC + 4;
+    reg.instr = INST_INFO[(CURRENT_STATE.PC - MEM_TEXT_START) >> 2];
+    return reg
+}
+
+
 /***************************************************************/
 /*                                                             */
 /* Procedure: process_instruction                              */
@@ -36,10 +49,27 @@ void process_instruction(){
     int i;      // for loop
 
     /* pipeline */
-    for ( i = PIPE_STAGE - 1; i > 0; i--)
-        CURRENT_STATE.PIPE[i] = CURRENT_STATE.PIPE[i-1];
     CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
+    CURRENT_STATE.PIPE[1] = CURRENT_STATE.IF_ID.PC;
+    CURRENT_STATE.PIPE[2] = CURRENT_STATE.ID_EX.PC;
+    CURRENT_STATE.PIPE[3] = CURRENT_STATE.EX_MEM.PC;
+    CURRENT_STATE.PIPE[4] = CURRENT_STATE.MEM_WB.PC;
 
+
+    MEM_WB = execute_MEM();
+    execute_WB();
+    EX_MEM = execute_EX();
+    ID_EX  = execute_ID();
+    IF_ID  = execute_IF();
+
+    CURRENT_STATE.PC = PC;
+    CURRENT_STATE.IF_ID = IF_ID;
+    CURRENT_STATE.ID_EX = ID_EX;
+    CURRENT_STATE.EX_MEM = EX_MEM;
+    CURRENT_STATE.MEM_WB = MEM_WB;
+    
+
+    /*
     // fetch
     inst = get_inst_info(CURRENT_STATE.PC);
     CURRENT_STATE.PC += BYTES_PER_WORD;
@@ -153,6 +183,7 @@ void process_instruction(){
         printf("Unknown instruction type: %d\n", OPCODE(inst));
         break;
     }
+    */
 
     if (CURRENT_STATE.PC < MEM_REGIONS[0].start || CURRENT_STATE.PC >= (MEM_REGIONS[0].start + (NUM_INST * 4)))
     RUN_BIT = FALSE;
