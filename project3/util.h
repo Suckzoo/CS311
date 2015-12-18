@@ -100,9 +100,8 @@ typedef struct ex_mem {
     uint32_t PC;
 
     uint32_t ALUResult;
-    uint32_t addrResult;
     uint32_t wrtData;
-    unsigned char wrtAddr;
+    unsigned char wrtReg;
 
     // MEM Control
     char cALUBranch;
@@ -120,7 +119,7 @@ typedef struct mem_wb
     uint32_t PC;
 
     uint32_t ALUResult;
-    unsigned char wrtAddr;
+    unsigned char wrtReg;
     uint32_t memV; // Read data from memory
 
     // WB Control
@@ -132,11 +131,15 @@ typedef struct CPU_State_Struct {
     uint32_t PC;        /* program counter */
     uint32_t REGS[MIPS_REGS];   /* register file */
     uint32_t PIPE[PIPE_STAGE];  /* pipeline stage */
-    // Custumize
+    // Customize
     if_id_reg IF_ID;
     id_ex_reg ID_EX;
     ex_mem_reg EX_MEM;
     mem_wb_reg MEM_WB;
+	int bubble_count; 
+	int EX_bubble_count;
+	int MEM_bubble_count;
+	int IF_ID_flush_count;
 } CPU_State;
 
 typedef struct {
@@ -148,6 +151,7 @@ typedef struct {
 extern CPU_State CURRENT_STATE;
 
 /* For Instructions */
+extern instruction noop;
 extern instruction *INST_INFO;
 extern int NUM_INST;
 
@@ -172,6 +176,10 @@ void		init_memory();
 void		init_inst_info();
 
 /* YOU IMPLEMENT THIS FUNCTION */
-void	process_instruction();
+void		process_instruction();
 
+/* CUSTOMIZED FLAGS */
+extern int nobp_set;
+extern int noforward_set;
+extern int num_inst;
 #endif

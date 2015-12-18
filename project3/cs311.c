@@ -111,18 +111,24 @@ void initialize(char *program_filename) {
 /* Procedure : main                                            */
 /*                                                             */
 /***************************************************************/
+int nobp_set;
+int noforward_set;
+int num_inst;
 int main(int argc, char *argv[]) {                              
+
     char** tokens;
     int count = 1;
     int addr1 = 0;
     int addr2 = 0;
-    int num_inst = 0;
+    num_inst = 0;
     int i = 100;		//for loop
 
     int mem_dump_set = 0;
     int debug_set = 0;
     int num_inst_set = 0;
     int pipe_dump_set = 0;
+	nobp_set = 0;
+	noforward_set = 0;
 
     /* Error Checking */
     if (argc < 2)
@@ -152,6 +158,10 @@ int main(int argc, char *argv[]) {
 	}
 	else if(strcmp(argv[count], "-p") == 0)
 	    pipe_dump_set = 1;
+	else if(strcmp(argv[count], "-nobp") == 0)
+		nobp_set = 1;
+	else if(strcmp(argv[count], "-f") == 0)
+		noforward_set = 1;
 	else{
 	    printf("Error: usage: %s [-nobp] [-f] [-m addr1:addr2] [-d] [-p] [-n num_instr] inputBinary\n", argv[0]);
 	    //You must add nobp and f option yourself
@@ -165,7 +175,7 @@ int main(int argc, char *argv[]) {
     if(debug_set){
 	printf("Simulating for %d cycles...\n\n", i);
 
-	for(; i > 0; i--){
+	for(;;){
 	    if (RUN_BIT == FALSE){
 	    	printf("Simulator halted\n\n");
 		break;

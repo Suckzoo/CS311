@@ -12,6 +12,9 @@
 #include "util.h"
 #include "run.h"
 
+extern int nobp_set;
+extern int noforward_set;
+extern int num_inst;
 /***************************************************************/
 /*                                                             */
 /* Procedure: get_inst_info                                    */
@@ -21,121 +24,357 @@
 /***************************************************************/
 instruction* get_inst_info(uint32_t pc) 
 { 
-    return &INST_INFO[(pc - MEM_TEXT_START) >> 2];
+	return &INST_INFO[(pc - MEM_TEXT_START) >> 2];
 }
 
 // FETCH
 if_id_reg run_IF(){
-    // TODO: Bubble & Flush
-    if_id_reg reg;
+	// TODO: Bubble & Flush
+	if_id_reg reg;
 
-    // default
-    reg.PC = CURRENT_STATE.PC;
-    reg.NPC = CURRENT_STATE.PC + BYTES_PER_WORD;
-    reg.instr = INST_INFO[(CURRENT_STATE.PC - MEM_TEXT_START) >> 2];
-    return reg
+	// default
+	reg.PC = CURRENT_STATE.PC;
+	reg.NPC = CURRENT_STATE.PC + BYTES_PER_WORD;
+	reg.instr = INST_INFO[(CURRENT_STATE.PC - MEM_TEXT_START) >> 2];
+	return reg;
+}
+
+if_id_reg run_BUBBLE() {
+	if_id_reg reg;
+	memset(&reg, 0, sizeof(if_id_reg));
+	return reg;
 }
 
 id_ex_reg run_ID(){
-    // TODO bubble, hazard, flush, jump
-    id_ex_reg reg;
-    if_id_mem IF_ID = CURRENT_STATE.IF_ID;
+	// TODO bubble, hazard, flush, jump
+	id_ex_reg reg;
+	if_id_reg IF_ID = CURRENT_STATE.IF_ID;
 
-    instruction instr = IF_ID.instr;
-    short op = instr.opcode;
-    short func_code = instr.func_code;
+	instruction instr = IF_ID.instr;
+	short op = instr.opcode;
+	short func_code = instr.func_code;
 
-    // fill register
-    reg.NPC = IF_ID.NPC + ;
-    reg.rs = instr.r_t.r_i.rs;
-    reg.rt = instr.r_t.r_i.rt;
-    reg.rd = instr.r_t.r_i.r_i.r.rd;
+	// fill register
+	// TODO: NOOP
+	
+	reg.NPC = IF_ID.NPC;
+	reg.rs = instr.r_t.r_i.rs;
+	reg.rt = instr.r_t.r_i.rt;
+	reg.rd = instr.r_t.r_i.r_i.r.rd;
 
-    reg.imm = instr.r_t.r_i.r_i.imm;
-    if (op == 0x0c || op == 0x0d)
-        reg.imm &= 0x0000ffff;
-    reg.shamt = instr.r_t.r_i.r_i.r.shamt;
+	reg.imm = instr.r_t.r_i.r_i.imm;
+	if (op == 0x0c || op == 0x0d)
+		reg.imm &= 0x0000ffff;
+	reg.shamt = instr.r_t.r_i.r_i.r.shamt;
 
-    reg.readV1 = CURRENT_STATE.REGS[reg.rs];
-    reg.readV2 = CURRENT_STATE.REGS[reg.rt];
+	reg.readV1 = CURRENT_STATE.REGS[reg.rs];
+	reg.readV2 = CURRENT_STATE.REGS[reg.rt];
 
 
-    // control bit~
-    switch(op){
-        case 0x23: // lw
-        case 0x2b: // sw
-        case 0x09: // add
-            reg.cALUOp = 0; // add
-            break;
-        case 0x0c: // andi
-            reg.cALUOp = 1;
-            break;
-        case 0x0d: // ori
-            reg.cALUOp = 2;
-            break;
-        case 0x04: // beq
-            reg.cALUOp = 3; // subst.
-            break;
-        case 0x05: // bne
-            reg.cALUOp = 4; // minus with inv 0
-            break;
-        case 0x0b: // sltiu
-            reg.cALUOp = 5;
-            break;
-        case 0x0f: // lui
-            reg.cALUOp = 6;
-            break;
-        case 0x03 // jal
-            reg.cALUOp = 7;
-            break;
-        case 0x00: // R
-            if(func_code==0x00) // sll
-                reg.cALUOp = 8;
-            else if(func_code==0x02) // srl
-                reg.cALUOp = 9;
-            else if(func_code==0x21) // addu
-                reg.cALUOp = 0;
-            else if(func_code==0x23) // subu
-                reg.cALUOp = 3;
-            else if(func_code==0x24) // and
-                reg.cALUOp = 1;
-            else if(func_code==0x25) // or
-                reg.cALUOp = 2;
-            else if(func_code==0x27) // nor
-                reg.cALUOp = 10;
-            else if(func_code==0x2b) // sltu
-                reg.cALUOp = 5;
-            else
-                printf("INVALID FUNC CODE\n");
-            break;
-        default:
-            printf("INVALID OP CODE\n");
-    }
+	// control bit~
+	switch(op){
+		case 0x23: // lw
+		case 0x2b: // sw
+		case 0x09: // add
+			reg.cALUOp = 0; // add
+			break;
+		case 0x0c: // andi
+			reg.cALUOp = 1;
+			break;
+		case 0x0d: // ori
+			reg.cALUOp = 2;
+			break;
+		case 0x04: // beq
+			reg.cALUOp = 3; // subst.
+			reg.NPC += (reg.imm<<2);
+			break;
+		case 0x05: // bne
+			reg.cALUOp = 4; // bne?
+			reg.NPC += (reg.imm<<2);
+			break;
+		case 0x0b: // sltiu
+			reg.cALUOp = 5;
+			break;
+		case 0x0f: // lui
+			reg.cALUOp = 6;
+			break;
+		case 0x03: // jal
+			reg.cALUOp = 7;
+			//CURRENT_STATE.REGS[31] = IF_ID.NPC;
+			//TODO : take this to WB stage~
+			reg.rt = 31;
+			reg.imm = IF_ID.NPC;
+			reg.NPC = (IF_ID.NPC & 0xF0000000);
+			reg.NPC |= (instr.r_t.r_i.r_i.imm << 2);
+			break;
+		case 0x02: // j
+			//TODO oh yeah
+			reg.cALUOp = -1;
+			reg.NPC = (IF_ID.NPC & 0xF0000000);
+			reg.NPC |= (reg.imm << 2);
+			break;
+		case 0x00: // R
+			if(func_code==0x00) // sll
+				reg.cALUOp = 8;
+			else if(func_code==0x02) // srl
+				reg.cALUOp = 9;
+			else if(func_code==0x21) // addu
+				reg.cALUOp = 0;
+			else if(func_code==0x23) // subu
+				reg.cALUOp = 3;
+			else if(func_code==0x24) // and
+				reg.cALUOp = 1;
+			else if(func_code==0x25) // or
+				reg.cALUOp = 2;
+			else if(func_code==0x27) // nor
+				reg.cALUOp = 10;
+			else if(func_code==0x2b) // sltu
+				reg.cALUOp = 5;
+			else if(func_code==0x8) // jr
+			{
+				reg.cALUOp = -1;
+				reg.NPC = CURRENT_STATE.REGS[reg.rs]; 
+			}
+			else
+				printf("INVALID FUNC CODE\n");
+			break;
+		default:
+			printf("INVALID OP CODE\n");
+	}
 
-    // ALUSrc
-    switch(op){
-        case 0x09:
-        case 0x0b:
-        case 0x0c:
-        case 0x0d:
-        case 0x0f:
-        case 0x23:
-        case 0x2b: // addiu, sltiu, ori, andi, lui, lw, sw 
-            reg.cALUSrc = 1;
-            break;
-        default:
-            reg.cALUSrc = 0;
-    }
+	// ALUSrc
+	switch(op){
+		case 0x04:
+		case 0x05:
+		case 0x09:
+		case 0x0b:
+		case 0x0c:
+		case 0x0d:
+		case 0x0f:
+		case 0x23:
+		case 0x2b: // addiu, sltiu, ori, andi, lui, lw, sw 
+			reg.cALUSrc = 1;
+			break;
+		default:
+			reg.cALUSrc = 0;
+	}
 
-    reg.cRegDst = (op == 0x00 || op == 0x03);
-    reg.cBranch = (op == 0x04 || op == 0x05);
-    reg.cRegWrt = !(op == 0x2b || op == 0x04 || op == 0x05);
-    reg.cMem2Reg = (op == 0x23);
+	reg.cRegDst = (op == 0x00 || op == 0x03);
+	reg.cBranch = (op == 0x04 || op == 0x05);
+	reg.cRegWrt = !(op == 0x2b || op == 0x04 || op == 0x05 || op == 0x02 ||
+		   			(op == 0x00 && func_code == 0x08));
+	reg.cMem2Reg = (op == 0x23);
+	reg.cMemRd = (op == 0x23);
+	reg.cMemWrt = (op == 0x2b);
 
-    reg.PC = IF_ID.PC;
-    return reg;
+	reg.PC = IF_ID.PC;
+	return reg;
 }
 
+ex_mem_reg run_EX()
+{
+	id_ex_reg ID_EX = CURRENT_STATE.ID_EX;
+	ex_mem_reg reg;
+	unsigned char rs = ID_EX.rs;
+	unsigned char rt = ID_EX.rt;
+	unsigned char shamt = ID_EX.shamt;
+	uint32_t readV1, readV2;
+	readV1 = ID_EX.readV1;
+	readV2 = ID_EX.readV2;
+	uint32_t imm = ID_EX.imm;
+	ex_mem_reg EX_MEM = CURRENT_STATE.EX_MEM;
+	mem_wb_reg MEM_WB = CURRENT_STATE.MEM_WB;
+	//TODO: consider Load-Use hazard!
+	if(EX_MEM.cRegWrt && (EX_MEM.wrtReg != 0) && (EX_MEM.wrtReg == ID_EX.rs))
+	{
+		if(noforward_set)
+		{
+			CURRENT_STATE.EX_bubble_count = 2;
+			return reg;
+		}
+		else
+			readV1 = EX_MEM.ALUResult;		
+	}
+	else if(MEM_WB.cRegWrt && (MEM_WB.wrtReg != 0) && (MEM_WB.wrtReg == ID_EX.rs))
+	{
+		if(noforward_set)
+		{
+			CURRENT_STATE.EX_bubble_count = 2;
+			return reg;
+		}
+		else
+			readV1 = EX_MEM.ALUResult;		
+	}
+	if(EX_MEM.cRegWrt && (EX_MEM.wrtReg != 0) && (EX_MEM.wrtReg == ID_EX.rt))
+	{
+		if(noforward_set)
+		{
+			CURRENT_STATE.EX_bubble_count = 2;
+			return reg;
+		}
+		else
+			readV2 = EX_MEM.ALUResult;		
+	}
+	else if(MEM_WB.cRegWrt && (MEM_WB.wrtReg != 0) && (MEM_WB.wrtReg == ID_EX.rt))
+	{
+		if(noforward_set)
+		{
+			CURRENT_STATE.EX_bubble_count = 2;
+			return reg;
+		}
+		else
+			readV2 = EX_MEM.ALUResult;		
+	}
+	switch(ID_EX.cALUOp)
+	{
+		case 0: // add, lw, sw
+			if(ID_EX.cALUSrc) // addi
+			{
+				reg.ALUResult = readV1 + imm;
+			}
+			else // add
+			{
+				reg.ALUResult = readV1 + readV2;
+			}
+			break;
+		case 1: // and
+			if(ID_EX.cALUSrc)
+			{
+				reg.ALUResult = readV1 & imm;
+			}
+			else
+			{
+				reg.ALUResult = readV1 & readV2;
+			}
+			break;
+		case 2: // ori
+			if(ID_EX.cALUSrc)
+			{
+				reg.ALUResult = readV1 | imm;
+			}
+			else
+			{
+				reg.ALUResult = readV1 | readV2;
+			}
+			break;
+		case 3: // subu, beq
+			reg.ALUResult = readV1 - readV2;
+			if(reg.ALUResult == 0){
+				reg.cALUBranch = 1;
+			}
+			break;
+		case 4: // bne?
+			reg.ALUResult = readV1 - readV2;
+			if(reg.ALUResult != 0){
+				reg.cALUBranch = 1;
+			}
+			break;
+		case 5: // sltiu, sltu
+			if(ID_EX.cALUSrc)
+			{
+				reg.ALUResult = readV1 < imm;
+			}
+			else
+			{
+				reg.ALUResult = readV1 < readV2;
+			}
+			break;
+		case 6: // lui
+			reg.ALUResult = imm << 16;
+			break;
+		case 7: // jal
+			reg.ALUResult = imm;
+			break;
+		case 8: // sll
+			reg.ALUResult = readV2 << shamt;
+			break;
+		case 9: // srl
+			reg.ALUResult = readV2 >> shamt;
+			break;
+		case 10: // nor
+			reg.ALUResult = ~(readV1 | readV2);
+			break;
+		default:
+			break;
+	};
+	reg.PC = ID_EX.PC;
+	reg.cMemWrt = ID_EX.cMemWrt;
+	reg.cMemRd = ID_EX.cMemRd;
+	reg.cBranch = ID_EX.cBranch;
+
+	reg.cMem2Reg = ID_EX.cMem2Reg;
+	reg.cRegWrt = ID_EX.cRegWrt;
+
+	//wrtData: write data ($t) for sw
+	//wrtReg: storing register!
+	reg.wrtData = ID_EX.readV2;
+	reg.wrtReg = ID_EX.cRegDst?ID_EX.rd:ID_EX.rt;
+
+	if(ID_EX.cBranch && !reg.cALUBranch)
+	{
+		if(nobp_set)
+			CURRENT_STATE.PC = reg.PC + 4;
+		else
+			CURRENT_STATE.IF_ID_flush_count = 1;
+	}
+	else if(ID_EX.cBranch && reg.cALUBranch && nobp_set)
+	{
+		CURRENT_STATE.PC = reg.PC + 4 + (imm<<2);
+	}
+
+	return reg;
+}
+
+mem_wb_reg run_MEM()
+{
+	ex_mem_reg EX_MEM = CURRENT_STATE.EX_MEM;
+	mem_wb_reg reg;
+	mem_wb_reg MEM_WB = CURRENT_STATE.MEM_WB;
+	//handling lw, sw
+	if(EX_MEM.cMemRd)
+	{
+		//TODO: read from memory!(hazardous!)
+		printf("EX_MEM ALU: %d\n",EX_MEM.ALUResult);
+		reg.memV = mem_read_32(EX_MEM.ALUResult);
+		printf("reg.memV: %d\n",reg.memV);
+	}
+	if(EX_MEM.cMemWrt)
+	{
+		//TODO: write to memory!
+		if(MEM_WB.cRegWrt && EX_MEM.cMemWrt && MEM_WB.wrtReg == EX_MEM.wrtReg)
+		{
+			if(noforward_set)
+			{
+				CURRENT_STATE.MEM_bubble_count = 1;
+				return reg;
+			}
+			mem_write_32(EX_MEM.ALUResult, MEM_WB.memV);
+		}
+		else
+			mem_write_32(EX_MEM.ALUResult, EX_MEM.wrtData);
+	}
+	reg.PC = EX_MEM.PC;
+	reg.ALUResult = EX_MEM.ALUResult;
+	reg.wrtReg = EX_MEM.wrtReg;
+	reg.cMem2Reg = EX_MEM.cMem2Reg;
+	reg.cRegWrt = EX_MEM.cRegWrt;
+	return reg;
+}
+
+void run_WB()
+{
+	mem_wb_reg MEM_WB = CURRENT_STATE.MEM_WB;
+	if(MEM_WB.cRegWrt)
+	{
+		CURRENT_STATE.REGS[MEM_WB.wrtReg] = MEM_WB.ALUResult;
+	}
+	if(MEM_WB.cMem2Reg)
+	{
+		CURRENT_STATE.REGS[MEM_WB.wrtReg] = MEM_WB.memV;
+	}
+	num_inst--;
+	
+}
 
 /***************************************************************/
 /*                                                             */
@@ -145,146 +384,86 @@ id_ex_reg run_ID(){
 /*                                                             */
 /***************************************************************/
 void process_instruction(){
-    instruction *inst;
-    int i;      // for loop
+	instruction *inst;
+	int i;      // for loop
 
-    /* pipeline */
-    CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
-    CURRENT_STATE.PIPE[1] = CURRENT_STATE.IF_ID.PC;
-    CURRENT_STATE.PIPE[2] = CURRENT_STATE.ID_EX.PC;
-    CURRENT_STATE.PIPE[3] = CURRENT_STATE.EX_MEM.PC;
-    CURRENT_STATE.PIPE[4] = CURRENT_STATE.MEM_WB.PC;
+	/* pipeline */
+	CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
+	CURRENT_STATE.PIPE[1] = CURRENT_STATE.IF_ID.PC;
+	CURRENT_STATE.PIPE[2] = CURRENT_STATE.ID_EX.PC;
+	CURRENT_STATE.PIPE[3] = CURRENT_STATE.EX_MEM.PC;
+	CURRENT_STATE.PIPE[4] = CURRENT_STATE.MEM_WB.PC;
+
+	mem_wb_reg MEM_WB;
+	ex_mem_reg EX_MEM; 
+	id_ex_reg ID_EX;
+	memset(&MEM_WB, 0, sizeof(mem_wb_reg));
+	memset(&EX_MEM, 0, sizeof(ex_mem_reg));
+	memset(&ID_EX, 0, sizeof(id_ex_reg));
+
+	if(CURRENT_STATE.PIPE[4]) run_WB();
+	if(CURRENT_STATE.PIPE[3]) MEM_WB = run_MEM();
+	if(CURRENT_STATE.MEM_bubble_count)
+	{
+		CURRENT_STATE.MEM_bubble_count--;
+	}
+	else
+	{
+		if(CURRENT_STATE.PIPE[2]) EX_MEM = run_EX();
+		if(CURRENT_STATE.EX_bubble_count)
+		{
+			CURRENT_STATE.MEM_WB = MEM_WB;
+			CURRENT_STATE.EX_bubble_count--;
+		}
+		else if(CURRENT_STATE.IF_ID_flush_count)
+		{
+			CURRENT_STATE.MEM_WB = MEM_WB;
+			CURRENT_STATE.EX_MEM = EX_MEM;
+			id_ex_reg rrr;
+			memset(&rrr, 0, sizeof(rrr));
+			CURRENT_STATE.ID_EX = rrr;
+			CURRENT_STATE.IF_ID = run_BUBBLE();
+			CURRENT_STATE.IF_ID_flush_count = 0;
+			CURRENT_STATE.PC = EX_MEM.PC + 4;
+		}
+		else
+		{
+			if(CURRENT_STATE.PIPE[1]) {
+				ID_EX  = run_ID();
+				CURRENT_STATE.PC = ID_EX.NPC;
+			}
+			if_id_reg IF_ID = run_IF();
+			if(CURRENT_STATE.bubble_count)
+			{
+				IF_ID = run_BUBBLE();
+				CURRENT_STATE.bubble_count--;
+			}
+			if(ID_EX.cMemRd 
+					&& (IF_ID.instr.r_t.r_i.rs == ID_EX.rt 
+						|| IF_ID.instr.r_t.r_i.rs == ID_EX.rt))
+			{
+				IF_ID = run_BUBBLE();
+			}	
+			if(ID_EX.cALUOp == 7 || ID_EX.cALUOp == -1)
+			{
+				IF_ID = run_BUBBLE();
+			}
+			if(nobp_set && (ID_EX.cALUOp == 3 || ID_EX.cALUOp == 4))
+			{
+				IF_ID = run_BUBBLE();
+				CURRENT_STATE.bubble_count = 2;
+			}
 
 
-    MEM_WB = execute_MEM();
-    execute_WB();
-    EX_MEM = execute_EX();
-    ID_EX  = execute_ID();
-    IF_ID  = execute_IF();
+			//TODO: what if branch fucked up?
+			CURRENT_STATE.IF_ID = IF_ID;
+			CURRENT_STATE.ID_EX = ID_EX;
+			CURRENT_STATE.EX_MEM = EX_MEM;
+			CURRENT_STATE.MEM_WB = MEM_WB;
+		}
+	}
+	
 
-    CURRENT_STATE.PC = PC;
-    CURRENT_STATE.IF_ID = IF_ID;
-    CURRENT_STATE.ID_EX = ID_EX;
-    CURRENT_STATE.EX_MEM = EX_MEM;
-    CURRENT_STATE.MEM_WB = MEM_WB;
-    
-
-    
-    // fetch
-    inst = get_inst_info(CURRENT_STATE.PC);
-    CURRENT_STATE.PC += BYTES_PER_WORD;
-
-    switch (OPCODE(inst))
-    {
-    case 0x9:       //(0x001001)ADDIU
-        CURRENT_STATE.REGS[RT (inst)] = CURRENT_STATE.REGS[RS (inst)] + (short) IMM (inst);
-        break;
-    case 0xc:       //(0x001100)ANDI
-        CURRENT_STATE.REGS[RT (inst)] = CURRENT_STATE.REGS[RS (inst)] & (0xffff & IMM (inst));
-        break;
-    case 0xf:       //(0x001111)LUI 
-        CURRENT_STATE.REGS[RT (inst)] = (IMM (inst) << 16) & 0xffff0000;
-        break;
-    case 0xd:       //(0x001101)ORI
-        CURRENT_STATE.REGS[RT (inst)] = CURRENT_STATE.REGS[RS (inst)] | (0xffff & IMM (inst));
-        break;
-    case 0xb:       //(0x001011)SLTIU 
-        {
-        int x = (short) IMM (inst);
-
-        if ((uint32_t) CURRENT_STATE.REGS[RS (inst)] < (uint32_t) x)
-            CURRENT_STATE.REGS[RT (inst)] = 1;
-        else
-            CURRENT_STATE.REGS[RT (inst)] = 0;
-        break;
-        }
-    case 0x23:      //(0x100011)LW  
-        LOAD_INST (&CURRENT_STATE.REGS[RT (inst)], mem_read_32((CURRENT_STATE.REGS[BASE (inst)] + IOFFSET (inst))), 0xffffffff);
-        break;
-    case 0x2b:      //(0x101011)SW
-        mem_write_32(CURRENT_STATE.REGS[BASE (inst)] + IOFFSET (inst), CURRENT_STATE.REGS[RT (inst)]);
-        break;
-    case 0x4:       //(0x000100)BEQ
-        BRANCH_INST (CURRENT_STATE.REGS[RS (inst)] == CURRENT_STATE.REGS[RT (inst)], CURRENT_STATE.PC + IDISP (inst), 0);
-        break;
-    case 0x5:       //(0x000101)BNE
-        BRANCH_INST (CURRENT_STATE.REGS[RS (inst)] != CURRENT_STATE.REGS[RT (inst)], CURRENT_STATE.PC + IDISP (inst), 0);
-        break;
-
-    case 0x0:       //(0x000000)ADDU, AND, NOR, OR, SLTU, SLL, SRL, SUBU  if JR
-        {
-        switch(FUNC (inst)){
-            case 0x21:  //ADDU
-            CURRENT_STATE.REGS[RD (inst)] = CURRENT_STATE.REGS[RS (inst)] + CURRENT_STATE.REGS[RT (inst)];
-            break;
-            case 0x24:  //AND
-            CURRENT_STATE.REGS[RD (inst)] = CURRENT_STATE.REGS[RS (inst)] & CURRENT_STATE.REGS[RT (inst)];
-            break;
-            case 0x27:  //NOR
-            CURRENT_STATE.REGS[RD (inst)] = ~ (CURRENT_STATE.REGS[RS (inst)] | CURRENT_STATE.REGS[RT (inst)]);
-            break;
-            case 0x25:  //OR
-            CURRENT_STATE.REGS[RD (inst)] = CURRENT_STATE.REGS[RS (inst)] | CURRENT_STATE.REGS[RT (inst)];
-            break;
-            case 0x2B:  //SLTU
-            if ( CURRENT_STATE.REGS[RS (inst)] <  CURRENT_STATE.REGS[RT (inst)])
-                CURRENT_STATE.REGS[RD (inst)] = 1;
-            else
-                CURRENT_STATE.REGS[RD (inst)] = 0;
-            break;
-            case 0x0:   //SLL
-            {
-                int shamt = SHAMT (inst);
-
-                if (shamt >= 0 && shamt < 32)
-                CURRENT_STATE.REGS[RD (inst)] = CURRENT_STATE.REGS[RT (inst)] << shamt;
-                else
-                CURRENT_STATE.REGS[RD (inst)] = CURRENT_STATE.REGS[RT (inst)];
-                break;
-            }
-            case 0x2:   //SRL
-            {
-                int shamt = SHAMT (inst);
-                uint32_t val = CURRENT_STATE.REGS[RT (inst)];
-
-                if (shamt >= 0 && shamt < 32)
-                CURRENT_STATE.REGS[RD (inst)] = val >> shamt;
-                else
-                CURRENT_STATE.REGS[RD (inst)] = val;
-                break;
-            }
-            case 0x23:  //SUBU
-            CURRENT_STATE.REGS[RD(inst)] = CURRENT_STATE.REGS[RS(inst)]-CURRENT_STATE.REGS[RT(inst)];
-            break;
-
-            case 0x8:   //JR
-            {
-                uint32_t tmp = CURRENT_STATE.REGS[RS (inst)];
-                JUMP_INST (tmp);
-
-                break;
-            }
-            default:
-            printf("Unknown function code type: %d\n", FUNC(inst));
-            break;
-        }
-        }
-        break;
-
-    case 0x2:       //(0x000010)J
-        JUMP_INST (((CURRENT_STATE.PC & 0xf0000000) | TARGET (inst) << 2));
-        break;
-    case 0x3:       //(0x000011)JAL
-        CURRENT_STATE.REGS[31] = CURRENT_STATE.PC;
-        JUMP_INST (((CURRENT_STATE.PC & 0xf0000000) | (TARGET (inst) << 2)));
-        break;
-
-    default:
-        printf("Unknown instruction type: %d\n", OPCODE(inst));
-        break;
-    }
-    */
-
-    if (CURRENT_STATE.PC < MEM_REGIONS[0].start || CURRENT_STATE.PC >= (MEM_REGIONS[0].start + (NUM_INST * 4)))
-    RUN_BIT = FALSE;
+	if (CURRENT_STATE.PC < MEM_REGIONS[0].start || CURRENT_STATE.PC >= (MEM_REGIONS[0].start + (NUM_INST * 4)) || !num_inst)
+		RUN_BIT = FALSE;
 }
