@@ -188,16 +188,17 @@ void cycle() {
 /* Purpose   : Simulate MIPS for n cycles                      */
 /*                                                             */
 /***************************************************************/
+extern int run_i;
 void run(int num_cycles) {
-    int i;
+    
 
     if (RUN_BIT == FALSE) {
 	printf("Can't simulate, Simulator is halted\n\n");
 	return;
     }
 
-    printf("Simulating for %d cycles...\n\n", num_cycles);
-    for (i = 0; i < num_cycles; i++) {
+    printf("Simulating for %d instructions...\n\n", num_cycles);
+    for (run_i = 0; run_i < num_cycles;) {
 	if (RUN_BIT == FALSE) {
 	    printf("Simulator halted\n\n");
 	    break;

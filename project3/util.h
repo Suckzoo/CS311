@@ -140,6 +140,10 @@ typedef struct CPU_State_Struct {
 	int EX_bubble_count;
 	int MEM_bubble_count;
 	int IF_ID_flush_count;
+    uint32_t branchhuh;
+    uint32_t jumphuh;
+    char pc_hold;
+    char flushed;
 } CPU_State;
 
 typedef struct {
@@ -182,4 +186,6 @@ void		process_instruction();
 extern int nobp_set;
 extern int noforward_set;
 extern int num_inst;
+extern int num_inst_set;
+int run_i;
 #endif

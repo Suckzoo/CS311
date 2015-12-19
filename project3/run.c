@@ -15,6 +15,10 @@
 extern int nobp_set;
 extern int noforward_set;
 extern int num_inst;
+extern int num_inst_set;
+extern int run_i;
+char DEBUG = 0;
+char start = 1;
 /***************************************************************/
 /*                                                             */
 /* Procedure: get_inst_info                                    */
@@ -32,14 +36,21 @@ if_id_reg run_IF(){
 	// TODO: Bubble & Flush
 	if_id_reg reg;
 
+	if ((CURRENT_STATE.PC < MEM_TEXT_START || CURRENT_STATE.PC >= (MEM_TEXT_START + (NUM_INST * 4)))) {
+		memset(&reg, 0, sizeof(reg));
+    	return reg;
+    }
+    
 	// default
 	reg.PC = CURRENT_STATE.PC;
 	reg.NPC = CURRENT_STATE.PC + BYTES_PER_WORD;
 	reg.instr = INST_INFO[(CURRENT_STATE.PC - MEM_TEXT_START) >> 2];
+    if(DEBUG) printf("IF Stage PC : %x\n", reg.PC );
 	return reg;
 }
 
 if_id_reg run_BUBBLE() {
+    if(DEBUG) printf("Bubble\n");
 	if_id_reg reg;
 	memset(&reg, 0, sizeof(if_id_reg));
 	return reg;
@@ -69,8 +80,9 @@ id_ex_reg run_ID(){
 
 	reg.readV1 = CURRENT_STATE.REGS[reg.rs];
 	reg.readV2 = CURRENT_STATE.REGS[reg.rt];
-
-
+    if(DEBUG) printf("ID Stage op : %x / rs : %d\n", op, reg.rs);
+    CURRENT_STATE.jumphuh = 0;
+    CURRENT_STATE.branchhuh = 0;
 	// control bit~
 	switch(op){
 		case 0x23: // lw
@@ -87,10 +99,12 @@ id_ex_reg run_ID(){
 		case 0x04: // beq
 			reg.cALUOp = 3; // subst.
 			reg.NPC += (reg.imm<<2);
+            CURRENT_STATE.branchhuh = reg.NPC;
 			break;
 		case 0x05: // bne
 			reg.cALUOp = 4; // bne?
 			reg.NPC += (reg.imm<<2);
+            CURRENT_STATE.branchhuh = reg.NPC;
 			break;
 		case 0x0b: // sltiu
 			reg.cALUOp = 5;
@@ -102,16 +116,18 @@ id_ex_reg run_ID(){
 			reg.cALUOp = 7;
 			//CURRENT_STATE.REGS[31] = IF_ID.NPC;
 			//TODO : take this to WB stage~
-			reg.rt = 31;
+			reg.rd = 31;
 			reg.imm = IF_ID.NPC;
 			reg.NPC = (IF_ID.NPC & 0xF0000000);
-			reg.NPC |= (instr.r_t.r_i.r_i.imm << 2);
+			reg.NPC |= (instr.r_t.target << 2);
+            CURRENT_STATE.jumphuh = reg.NPC;
 			break;
 		case 0x02: // j
 			//TODO oh yeah
 			reg.cALUOp = -1;
 			reg.NPC = (IF_ID.NPC & 0xF0000000);
-			reg.NPC |= (reg.imm << 2);
+			reg.NPC |= (instr.r_t.target << 2);
+            CURRENT_STATE.jumphuh = reg.NPC;
 			break;
 		case 0x00: // R
 			if(func_code==0x00) // sll
@@ -133,7 +149,8 @@ id_ex_reg run_ID(){
 			else if(func_code==0x8) // jr
 			{
 				reg.cALUOp = -1;
-				reg.NPC = CURRENT_STATE.REGS[reg.rs]; 
+				reg.NPC = CURRENT_STATE.REGS[reg.rs];
+                CURRENT_STATE.jumphuh = CURRENT_STATE.REGS[reg.rs];
 			}
 			else
 				printf("INVALID FUNC CODE\n");
@@ -161,8 +178,8 @@ id_ex_reg run_ID(){
 
 	reg.cRegDst = (op == 0x00 || op == 0x03);
 	reg.cBranch = (op == 0x04 || op == 0x05);
-	reg.cRegWrt = !(op == 0x2b || op == 0x04 || op == 0x05 || op == 0x02 ||
-		   			(op == 0x00 && func_code == 0x08));
+    reg.cRegWrt = (op == 0x00 || op == 0x09 || op == 0x0c || 
+           op == 0x0f || op == 0x0d || op == 0x0b || op == 0x23 || op == 0x03);
 	reg.cMem2Reg = (op == 0x23);
 	reg.cMemRd = (op == 0x23);
 	reg.cMemWrt = (op == 0x2b);
@@ -185,15 +202,15 @@ ex_mem_reg run_EX()
 	ex_mem_reg EX_MEM = CURRENT_STATE.EX_MEM;
 	mem_wb_reg MEM_WB = CURRENT_STATE.MEM_WB;
 	//TODO: consider Load-Use hazard!
-	if(EX_MEM.cRegWrt && (EX_MEM.wrtReg != 0) && (EX_MEM.wrtReg == ID_EX.rs))
-	{
+  if(EX_MEM.cRegWrt && (EX_MEM.wrtReg != 0) && (EX_MEM.wrtReg == ID_EX.rs))
+	{  
 		if(noforward_set)
 		{
 			CURRENT_STATE.EX_bubble_count = 2;
 			return reg;
 		}
 		else
-			readV1 = EX_MEM.ALUResult;		
+			readV1 = EX_MEM.ALUResult;	
 	}
 	else if(MEM_WB.cRegWrt && (MEM_WB.wrtReg != 0) && (MEM_WB.wrtReg == ID_EX.rs))
 	{
@@ -203,7 +220,7 @@ ex_mem_reg run_EX()
 			return reg;
 		}
 		else
-			readV1 = EX_MEM.ALUResult;		
+			readV1 = MEM_WB.ALUResult;		
 	}
 	if(EX_MEM.cRegWrt && (EX_MEM.wrtReg != 0) && (EX_MEM.wrtReg == ID_EX.rt))
 	{
@@ -223,7 +240,7 @@ ex_mem_reg run_EX()
 			return reg;
 		}
 		else
-			readV2 = EX_MEM.ALUResult;		
+			readV2 = MEM_WB.ALUResult;		
 	}
 	switch(ID_EX.cALUOp)
 	{
@@ -259,15 +276,11 @@ ex_mem_reg run_EX()
 			break;
 		case 3: // subu, beq
 			reg.ALUResult = readV1 - readV2;
-			if(reg.ALUResult == 0){
-				reg.cALUBranch = 1;
-			}
+			reg.cALUBranch = !reg.ALUResult;
 			break;
 		case 4: // bne?
 			reg.ALUResult = readV1 - readV2;
-			if(reg.ALUResult != 0){
-				reg.cALUBranch = 1;
-			}
+			reg.cALUBranch = !!reg.ALUResult;			
 			break;
 		case 5: // sltiu, sltu
 			if(ID_EX.cALUSrc)
@@ -312,15 +325,18 @@ ex_mem_reg run_EX()
 
 	if(ID_EX.cBranch && !reg.cALUBranch)
 	{
-		if(nobp_set)
-			CURRENT_STATE.PC = reg.PC + 4;
-		else
+		// if(nobp_set)
+		// 	// CURRENT_STATE.PC = reg.PC + 4;
+		if(!nobp_set){
 			CURRENT_STATE.IF_ID_flush_count = 1;
+            if(DEBUG) printf("TIME TO FLUSH@@@@@@\n");
+        }
 	}
 	else if(ID_EX.cBranch && reg.cALUBranch && nobp_set)
 	{
-		CURRENT_STATE.PC = reg.PC + 4 + (imm<<2);
+		CURRENT_STATE.branchhuh = reg.PC + 4 + (imm<<2);
 	}
+    if(DEBUG) printf("EX Stage Result : %x/readV1 : %x, imm : %x\n", reg.ALUResult, readV1, imm);
 
 	return reg;
 }
@@ -334,9 +350,9 @@ mem_wb_reg run_MEM()
 	if(EX_MEM.cMemRd)
 	{
 		//TODO: read from memory!(hazardous!)
-		printf("EX_MEM ALU: %d\n",EX_MEM.ALUResult);
+		if(DEBUG) printf("EX_MEM ALU: %d\n",EX_MEM.ALUResult);
 		reg.memV = mem_read_32(EX_MEM.ALUResult);
-		printf("reg.memV: %d\n",reg.memV);
+		if(DEBUG) printf("reg.memV: %d\n",reg.memV);
 	}
 	if(EX_MEM.cMemWrt)
 	{
@@ -364,16 +380,19 @@ mem_wb_reg run_MEM()
 void run_WB()
 {
 	mem_wb_reg MEM_WB = CURRENT_STATE.MEM_WB;
-	if(MEM_WB.cRegWrt)
+	if(MEM_WB.cMem2Reg)
+    {
+        if(DEBUG) printf("Write back mem Result! : %x\n", MEM_WB.memV);
+        CURRENT_STATE.REGS[MEM_WB.wrtReg] = MEM_WB.memV;
+    }
+    else if(MEM_WB.cRegWrt)
 	{
+        if(DEBUG) printf("Write back ALU Result! : %x\n", MEM_WB.ALUResult);
 		CURRENT_STATE.REGS[MEM_WB.wrtReg] = MEM_WB.ALUResult;
 	}
-	if(MEM_WB.cMem2Reg)
-	{
-		CURRENT_STATE.REGS[MEM_WB.wrtReg] = MEM_WB.memV;
-	}
-	num_inst--;
 	
+	num_inst--;
+	run_i++;
 }
 
 /***************************************************************/
@@ -383,6 +402,35 @@ void run_WB()
 /* Purpose: Process one instrction                             */
 /*                                                             */
 /***************************************************************/
+uint32_t get_PC(){
+    uint32_t ret = CURRENT_STATE.PC;
+    if (CURRENT_STATE.PC < MEM_TEXT_START || CURRENT_STATE.PC >= (MEM_TEXT_START + (NUM_INST * 4)))
+        return ret;
+    
+    if (CURRENT_STATE.pc_hold) {
+        CURRENT_STATE.pc_hold = 0;
+        return ret;
+    }
+
+    if (CURRENT_STATE.flushed){
+        if(DEBUG) printf("###PMEM_PC : %x\n", CURRENT_STATE.EX_MEM.PC);
+        ret = CURRENT_STATE.MEM_WB.PC + 4;
+        CURRENT_STATE.flushed = 0;
+    }
+    else if (CURRENT_STATE.branchhuh){
+        ret = CURRENT_STATE.branchhuh;
+        CURRENT_STATE.branchhuh = 0;
+    }
+    else if (CURRENT_STATE.jumphuh){
+        ret = CURRENT_STATE.jumphuh;
+        CURRENT_STATE.jumphuh = 0;
+    }
+    else{
+        ret += 4;
+    }
+    return ret;
+}
+
 void process_instruction(){
 	instruction *inst;
 	int i;      // for loop
@@ -400,13 +448,25 @@ void process_instruction(){
 	memset(&MEM_WB, 0, sizeof(mem_wb_reg));
 	memset(&EX_MEM, 0, sizeof(ex_mem_reg));
 	memset(&ID_EX, 0, sizeof(id_ex_reg));
-
 	if(CURRENT_STATE.PIPE[4]) run_WB();
 	if(CURRENT_STATE.PIPE[3]) MEM_WB = run_MEM();
 	if(CURRENT_STATE.MEM_bubble_count)
 	{
 		CURRENT_STATE.MEM_bubble_count--;
 	}
+    else if(CURRENT_STATE.IF_ID_flush_count)
+    {
+        CURRENT_STATE.MEM_WB = MEM_WB;
+        ex_mem_reg rr;
+        memset(&rr, 0, sizeof(rr));
+        CURRENT_STATE.EX_MEM = rr;
+        id_ex_reg rrr;
+        memset(&rrr, 0, sizeof(rrr));
+        CURRENT_STATE.ID_EX = rrr;
+        CURRENT_STATE.IF_ID = run_BUBBLE();
+        CURRENT_STATE.IF_ID_flush_count = 0;
+        CURRENT_STATE.flushed = 1;
+    }
 	else
 	{
 		if(CURRENT_STATE.PIPE[2]) EX_MEM = run_EX();
@@ -415,26 +475,33 @@ void process_instruction(){
 			CURRENT_STATE.MEM_WB = MEM_WB;
 			CURRENT_STATE.EX_bubble_count--;
 		}
-		else if(CURRENT_STATE.IF_ID_flush_count)
-		{
-			CURRENT_STATE.MEM_WB = MEM_WB;
-			CURRENT_STATE.EX_MEM = EX_MEM;
-			id_ex_reg rrr;
-			memset(&rrr, 0, sizeof(rrr));
-			CURRENT_STATE.ID_EX = rrr;
-			CURRENT_STATE.IF_ID = run_BUBBLE();
-			CURRENT_STATE.IF_ID_flush_count = 0;
-			CURRENT_STATE.PC = EX_MEM.PC + 4;
-		}
+        // 얘가 여기 있으면 안됨. 파이프라인은 다 같이 도는거기 때문에 이번 결과를 적용시켜버리면 안되지.
+		// else if(CURRENT_STATE.IF_ID_flush_count)
+		// {
+		// 	CURRENT_STATE.MEM_WB = MEM_WB;
+		// 	CURRENT_STATE.EX_MEM = EX_MEM;
+		// 	id_ex_reg rrr;
+		// 	memset(&rrr, 0, sizeof(rrr));
+		// 	CURRENT_STATE.ID_EX = rrr;
+		// 	CURRENT_STATE.IF_ID = run_BUBBLE();
+		// 	CURRENT_STATE.IF_ID_flush_count = 0;
+  //           CURRENT_STATE.flushed = 1;
+		// }
 		else
 		{
 			if(CURRENT_STATE.PIPE[1]) {
 				ID_EX  = run_ID();
-				CURRENT_STATE.PC = ID_EX.NPC;
+				// CURRENT_STATE.PC = ID_EX.NPC;
 			}
 			if_id_reg IF_ID = run_IF();
+            // branch가 taken되면 IF_ID에 들어가있는걸 비운다!
+            if(CURRENT_STATE.branchhuh){
+                IF_ID = run_BUBBLE();
+            }
 			if(CURRENT_STATE.bubble_count)
 			{
+                if(DEBUG) printf("bubble1\n");
+                CURRENT_STATE.pc_hold = 1;
 				IF_ID = run_BUBBLE();
 				CURRENT_STATE.bubble_count--;
 			}
@@ -442,17 +509,25 @@ void process_instruction(){
 					&& (IF_ID.instr.r_t.r_i.rs == ID_EX.rt 
 						|| IF_ID.instr.r_t.r_i.rs == ID_EX.rt))
 			{
+                CURRENT_STATE.pc_hold = 1;
+                if(DEBUG) printf("bubble2\n");
 				IF_ID = run_BUBBLE();
 			}	
 			if(ID_EX.cALUOp == 7 || ID_EX.cALUOp == -1)
 			{
+                // CURRENT_STATE.pc_hold = 1;
+                if(DEBUG) printf("bubble3\n");
 				IF_ID = run_BUBBLE();
 			}
 			if(nobp_set && (ID_EX.cALUOp == 3 || ID_EX.cALUOp == 4))
 			{
+                if(DEBUG) printf("bubble4\n");
 				IF_ID = run_BUBBLE();
 				CURRENT_STATE.bubble_count = 2;
+                CURRENT_STATE.pc_hold = 1;
 			}
+
+            // bubble + flush..? 
 
 
 			//TODO: what if branch fucked up?
@@ -462,8 +537,12 @@ void process_instruction(){
 			CURRENT_STATE.MEM_WB = MEM_WB;
 		}
 	}
-	
-
-	if (CURRENT_STATE.PC < MEM_REGIONS[0].start || CURRENT_STATE.PC >= (MEM_REGIONS[0].start + (NUM_INST * 4)) || !num_inst)
+	CURRENT_STATE.PC = get_PC();
+	// printf("PC : %x, end point : %x\n", CURRENT_STATE.PC, MEM_REGIONS[0].start + (NUM_INST * 4) );
+	if (CURRENT_STATE.PC < MEM_REGIONS[0].start || 
+		( CURRENT_STATE.PC >= (MEM_REGIONS[0].start + (NUM_INST * 4)) &&
+			!CURRENT_STATE.IF_ID.PC&&!CURRENT_STATE.ID_EX.PC&&
+			!CURRENT_STATE.EX_MEM.PC&&!CURRENT_STATE.MEM_WB.PC)
+        || (num_inst_set && !num_inst))
 		RUN_BIT = FALSE;
 }

@@ -114,6 +114,7 @@ void initialize(char *program_filename) {
 int nobp_set;
 int noforward_set;
 int num_inst;
+int num_inst_set;
 int main(int argc, char *argv[]) {                              
 
     char** tokens;
@@ -125,7 +126,7 @@ int main(int argc, char *argv[]) {
 
     int mem_dump_set = 0;
     int debug_set = 0;
-    int num_inst_set = 0;
+    num_inst_set = 0;
     int pipe_dump_set = 0;
 	nobp_set = 0;
 	noforward_set = 0;
@@ -173,7 +174,7 @@ int main(int argc, char *argv[]) {
     if(num_inst_set) i = num_inst;
 
     if(debug_set){
-	printf("Simulating for %d cycles...\n\n", i);
+	printf("Simulating for %d instructions...\n\n", i);
 
 	for(;;){
 	    if (RUN_BIT == FALSE){
