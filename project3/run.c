@@ -60,7 +60,8 @@ id_ex_reg run_ID(){
 	// TODO bubble, hazard, flush, jump
 	id_ex_reg reg;
 	if_id_reg IF_ID = CURRENT_STATE.IF_ID;
-
+	id_ex_reg ID_EX = CURRENT_STATE.ID_EX;
+	ex_mem_reg EX_MEM = CURRENT_STATE.EX_MEM;
 	instruction instr = IF_ID.instr;
 	short op = instr.opcode;
 	short func_code = instr.func_code;
@@ -83,6 +84,30 @@ id_ex_reg run_ID(){
     if(DEBUG) printf("ID Stage op : %x / rs : %d\n", op, reg.rs);
     CURRENT_STATE.jumphuh = 0;
     CURRENT_STATE.branchhuh = 0;
+
+    if(noforward_set){
+    	char a = 0,b = 0;
+    	unsigned char ID_EX_target = ID_EX.cRegDst ? ID_EX.rd : ID_EX.rt;
+		if (ID_EX.cRegWrt && ID_EX_target != 0 && (ID_EX_target == reg.rs))
+	    	a = 2;
+    	else if (EX_MEM.cRegWrt && EX_MEM.wrtReg != 0 && (EX_MEM.wrtReg == reg.rs))
+	    	a = 1;
+    
+    	if (ID_EX.cRegWrt && ID_EX_target != 0 && (ID_EX_target == reg.rt))
+	    	b = 2;
+    	else if (EX_MEM.cRegWrt && EX_MEM.wrtReg != 0 && (EX_MEM.wrtReg == reg.rt))
+	    	b = 1;
+	    a = a>b?a:b;
+	    CURRENT_STATE.EX_bubble_count = a;
+	    if(a){
+		    id_ex_reg rrr;
+			memset(&rrr, 0, sizeof(rrr));
+			return rrr;	
+		}
+	    // IF, ID stall max(a,b) cycle.
+	    // this stage should return zero register
+    }
+
 	// control bit~
 	switch(op){
 		case 0x23: // lw
@@ -99,11 +124,13 @@ id_ex_reg run_ID(){
 		case 0x04: // beq
 			reg.cALUOp = 3; // subst.
 			reg.NPC += (reg.imm<<2);
+			if(!nobp_set)
             CURRENT_STATE.branchhuh = reg.NPC;
 			break;
 		case 0x05: // bne
 			reg.cALUOp = 4; // bne?
 			reg.NPC += (reg.imm<<2);
+            if(!nobp_set)
             CURRENT_STATE.branchhuh = reg.NPC;
 			break;
 		case 0x0b: // sltiu
@@ -204,42 +231,47 @@ ex_mem_reg run_EX()
 	//TODO: consider Load-Use hazard!
   if(EX_MEM.cRegWrt && (EX_MEM.wrtReg != 0) && (EX_MEM.wrtReg == ID_EX.rs))
 	{  
-		if(noforward_set)
-		{
-			CURRENT_STATE.EX_bubble_count = 2;
-			return reg;
-		}
-		else
+		// if(noforward_set)
+		// {
+		// 	printf("PC : %x makes EX bubble\n", ID_EX.PC);
+		// 	CURRENT_STATE.EX_bubble_count = 2;
+		// 	memset(&reg, 0, sizeof(reg));
+		// 	return reg;
+		// }
+		// else
 			readV1 = EX_MEM.ALUResult;	
 	}
 	else if(MEM_WB.cRegWrt && (MEM_WB.wrtReg != 0) && (MEM_WB.wrtReg == ID_EX.rs))
 	{
-		if(noforward_set)
-		{
-			CURRENT_STATE.EX_bubble_count = 2;
-			return reg;
-		}
-		else
+		// if(noforward_set)
+		// {
+		// 	CURRENT_STATE.EX_bubble_count = 1;
+		// 	memset(&reg, 0, sizeof(reg));
+		// 	return reg;
+		// }
+		// else
 			readV1 = MEM_WB.ALUResult;		
 	}
 	if(EX_MEM.cRegWrt && (EX_MEM.wrtReg != 0) && (EX_MEM.wrtReg == ID_EX.rt))
 	{
-		if(noforward_set)
-		{
-			CURRENT_STATE.EX_bubble_count = 2;
-			return reg;
-		}
-		else
+		// if(noforward_set)
+		// {
+		// 	CURRENT_STATE.EX_bubble_count = 2;
+		// 	memset(&reg, 0, sizeof(reg));
+		// 	return reg;
+		// }
+		// else
 			readV2 = EX_MEM.ALUResult;		
 	}
 	else if(MEM_WB.cRegWrt && (MEM_WB.wrtReg != 0) && (MEM_WB.wrtReg == ID_EX.rt))
 	{
-		if(noforward_set)
-		{
-			CURRENT_STATE.EX_bubble_count = 2;
-			return reg;
-		}
-		else
+		// if(noforward_set)
+		// {
+		// 	CURRENT_STATE.EX_bubble_count = 1;
+		// 	memset(&reg, 0, sizeof(reg));
+		// 	return reg;
+		// }
+		// else
 			readV2 = MEM_WB.ALUResult;		
 	}
 	switch(ID_EX.cALUOp)
@@ -331,6 +363,9 @@ ex_mem_reg run_EX()
 			CURRENT_STATE.IF_ID_flush_count = 1;
             if(DEBUG) printf("TIME TO FLUSH@@@@@@\n");
         }
+       	else{
+       		CURRENT_STATE.branchhuh = reg.PC + 4;
+       	}
 	}
 	else if(ID_EX.cBranch && reg.cALUBranch && nobp_set)
 	{
@@ -362,6 +397,7 @@ mem_wb_reg run_MEM()
 			if(noforward_set)
 			{
 				CURRENT_STATE.MEM_bubble_count = 1;
+				memset(&reg, 0, sizeof(reg));
 				return reg;
 			}
 			mem_write_32(EX_MEM.ALUResult, MEM_WB.memV);
@@ -407,7 +443,7 @@ uint32_t get_PC(){
     if (CURRENT_STATE.PC < MEM_TEXT_START || CURRENT_STATE.PC >= (MEM_TEXT_START + (NUM_INST * 4)))
         return ret;
     
-    if (CURRENT_STATE.pc_hold) {
+    if (CURRENT_STATE.pc_hold && !CURRENT_STATE.branchhuh) {
         CURRENT_STATE.pc_hold = 0;
         return ret;
     }
@@ -452,7 +488,9 @@ void process_instruction(){
 	if(CURRENT_STATE.PIPE[3]) MEM_WB = run_MEM();
 	if(CURRENT_STATE.MEM_bubble_count)
 	{
+		if(DEBUG) printf("MEM BUBBLE\n");
 		CURRENT_STATE.MEM_bubble_count--;
+		CURRENT_STATE.pc_hold = 1;
 	}
     else if(CURRENT_STATE.IF_ID_flush_count)
     {
@@ -470,11 +508,13 @@ void process_instruction(){
 	else
 	{
 		if(CURRENT_STATE.PIPE[2]) EX_MEM = run_EX();
-		if(CURRENT_STATE.EX_bubble_count)
-		{
-			CURRENT_STATE.MEM_WB = MEM_WB;
-			CURRENT_STATE.EX_bubble_count--;
-		}
+		// if(CURRENT_STATE.EX_bubble_count)
+		// {
+		// 	if(DEBUG) printf("EX BUBBLE\n");
+		// 	CURRENT_STATE.MEM_WB = MEM_WB;
+		// 	CURRENT_STATE.EX_bubble_count--;
+		// 	CURRENT_STATE.pc_hold = 1;
+		// }
         // 얘가 여기 있으면 안됨. 파이프라인은 다 같이 도는거기 때문에 이번 결과를 적용시켜버리면 안되지.
 		// else if(CURRENT_STATE.IF_ID_flush_count)
 		// {
@@ -487,47 +527,55 @@ void process_instruction(){
 		// 	CURRENT_STATE.IF_ID_flush_count = 0;
   //           CURRENT_STATE.flushed = 1;
 		// }
-		else
-		{
-			if(CURRENT_STATE.PIPE[1]) {
-				ID_EX  = run_ID();
-				// CURRENT_STATE.PC = ID_EX.NPC;
-			}
-			if_id_reg IF_ID = run_IF();
-            // branch가 taken되면 IF_ID에 들어가있는걸 비운다!
-            if(CURRENT_STATE.branchhuh){
-                IF_ID = run_BUBBLE();
-            }
+	
+		if(CURRENT_STATE.PIPE[1]) {
+			ID_EX  = run_ID();
+			// CURRENT_STATE.PC = ID_EX.NPC;
+		}
+		if_id_reg IF_ID = run_IF();
+		// 포워드 없을때 기다리는거!
+		if(CURRENT_STATE.EX_bubble_count){
+			CURRENT_STATE.MEM_WB = MEM_WB;
+			CURRENT_STATE.EX_MEM = EX_MEM;
+			CURRENT_STATE.ID_EX = ID_EX;
+			CURRENT_STATE.pc_hold = 1;
+			CURRENT_STATE.EX_bubble_count--;
+		}
+		else{
+	        // branch가 taken되면 IF_ID에 들어가있는걸 비운다!
+	        if(!nobp_set && CURRENT_STATE.branchhuh){
+	            IF_ID = run_BUBBLE();
+	        }
 			if(CURRENT_STATE.bubble_count)
 			{
-                if(DEBUG) printf("bubble1\n");
-                CURRENT_STATE.pc_hold = 1;
+	            if(DEBUG) printf("bubble1\n");
+	            CURRENT_STATE.pc_hold = 1;
 				IF_ID = run_BUBBLE();
 				CURRENT_STATE.bubble_count--;
 			}
 			if(ID_EX.cMemRd 
 					&& (IF_ID.instr.r_t.r_i.rs == ID_EX.rt 
-						|| IF_ID.instr.r_t.r_i.rs == ID_EX.rt))
+						|| IF_ID.instr.r_t.r_i.rs == ID_EX.rt)) // Load-use XXX 포워드 없을땐?
 			{
-                CURRENT_STATE.pc_hold = 1;
-                if(DEBUG) printf("bubble2\n");
+	            CURRENT_STATE.pc_hold = 1;
+	            if(DEBUG) printf("bubble2\n");
 				IF_ID = run_BUBBLE();
 			}	
-			if(ID_EX.cALUOp == 7 || ID_EX.cALUOp == -1)
+			if(ID_EX.cALUOp == 7 || ID_EX.cALUOp == -1) // Jump
 			{
-                // CURRENT_STATE.pc_hold = 1;
-                if(DEBUG) printf("bubble3\n");
+	            // CURRENT_STATE.pc_hold = 1;
+	            if(DEBUG) printf("bubble3\n");
 				IF_ID = run_BUBBLE();
 			}
-			if(nobp_set && (ID_EX.cALUOp == 3 || ID_EX.cALUOp == 4))
+			// if(nobp_set && (ID_EX.cALUOp == 3 || ID_EX.cALUOp == 4)) // nobp!
+			if(nobp_set && (ID_EX.cBranch))
 			{
-                if(DEBUG) printf("bubble4\n");
+	            if(DEBUG) printf("bubble4\n");
 				IF_ID = run_BUBBLE();
 				CURRENT_STATE.bubble_count = 2;
-                CURRENT_STATE.pc_hold = 1;
 			}
 
-            // bubble + flush..? 
+	        // bubble + flush..? 
 
 
 			//TODO: what if branch fucked up?

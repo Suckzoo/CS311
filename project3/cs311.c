@@ -171,6 +171,8 @@ int main(int argc, char *argv[]) {
 	count++;
     }
 
+    noforward_set = !noforward_set;
+
     if(num_inst_set) i = num_inst;
 
     if(debug_set){
