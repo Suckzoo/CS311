@@ -174,6 +174,11 @@ int main(int argc, char *argv[]) {
     noforward_set = !noforward_set;
 
     if(num_inst_set) i = num_inst;
+    else{
+    	num_inst_set = 1;
+    	i = 100;
+    	num_inst = 100;
+    }
 
     if(debug_set){
 	printf("Simulating for %d instructions...\n\n", i);
