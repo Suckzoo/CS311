@@ -555,11 +555,11 @@ void process_instruction(){
 			}
 			if(ID_EX.cMemRd 
 					&& (IF_ID.instr.r_t.r_i.rs == ID_EX.rt 
-						|| IF_ID.instr.r_t.r_i.rs == ID_EX.rt)) // Load-use XXX 포워드 없을땐?
+						|| IF_ID.instr.r_t.r_i.rt == ID_EX.rt)) // Load-use XXX 포워드 없을땐?
 																// IF에 잡아두면 안되네 밀어줘야하네!
 			{
 	            CURRENT_STATE.pc_hold = 1;
-	            if(DEBUG) printf("bubble2: load-use\n");
+	            printf("bubble2: load-use\n");
 				IF_ID = run_BUBBLE();
 			}	
 			if(ID_EX.cALUOp == 7 || ID_EX.cALUOp == -1) // Jump

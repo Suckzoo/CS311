@@ -197,8 +197,8 @@ int main(int argc, char *argv[]) {
 	}
 	else{
 		run(i);
+		if(pipe_dump_set) pdump();
 		rdump();
-
 		if(mem_dump_set) mdump(addr1, addr2);
 	}
 
