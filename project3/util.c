@@ -15,8 +15,8 @@
 
 /* memory will be dynamically allocated at initialization */
 mem_region_t MEM_REGIONS[] = {
-    { MEM_TEXT_START, MEM_TEXT_SIZE, NULL },
-    { MEM_DATA_START, MEM_DATA_SIZE, NULL },
+	{ MEM_TEXT_START, MEM_TEXT_SIZE, NULL },
+	{ MEM_DATA_START, MEM_DATA_SIZE, NULL },
 };
 
 #define MEM_NREGIONS (sizeof(MEM_REGIONS)/sizeof(mem_region_t))
@@ -43,50 +43,50 @@ int NUM_INST;
 /***************************************************************/
 char** str_split(char *a_str, const char a_delim)
 {
-    char** result    = 0;
-    size_t count     = 0;
-    char* tmp        = a_str;
-    char* last_comma = 0;
-    char delim[2];
-    delim[0] = a_delim;
-    delim[1] = 0;
+	char** result    = 0;
+	size_t count     = 0;
+	char* tmp        = a_str;
+	char* last_comma = 0;
+	char delim[2];
+	delim[0] = a_delim;
+	delim[1] = 0;
 
-    /* Count how many elements will be extracted. */
-    while (*tmp)
-    {
-	if (a_delim == *tmp)
+	/* Count how many elements will be extracted. */
+	while (*tmp)
 	{
-	    count++;
-	    last_comma = tmp;
+		if (a_delim == *tmp)
+		{
+			count++;
+			last_comma = tmp;
+		}
+		tmp++;
 	}
-	tmp++;
-    }
 
-    /* Add space for trailing token. */
-    count += last_comma < (a_str + strlen(a_str) - 1);
+	/* Add space for trailing token. */
+	count += last_comma < (a_str + strlen(a_str) - 1);
 
-    /* Add space for terminating null string so caller
-     *        knows where the list of returned strings ends. */
-    count++;
+	/* Add space for terminating null string so caller
+	 *        knows where the list of returned strings ends. */
+	count++;
 
-    result = malloc(sizeof(char*) * count);
+	result = malloc(sizeof(char*) * count);
 
-    if (result)
-    {
-	size_t idx  = 0;
-	char* token = strtok(a_str, delim);
-
-	while (token)
+	if (result)
 	{
-	    assert(idx < count);
-	    *(result + idx++) = strdup(token);
-	    token = strtok(0, delim);
-	}
-	assert(idx == count - 1);
-	*(result + idx) = 0;
-    }
+		size_t idx  = 0;
+		char* token = strtok(a_str, delim);
 
-    return result;
+		while (token)
+		{
+			assert(idx < count);
+			*(result + idx++) = strdup(token);
+			token = strtok(0, delim);
+		}
+		assert(idx == count - 1);
+		*(result + idx) = 0;
+	}
+
+	return result;
 }
 
 /***************************************************************/
@@ -98,7 +98,7 @@ char** str_split(char *a_str, const char a_delim)
 /***************************************************************/
 int fromBinary(char *s)
 {
-    return (int) strtol(s, NULL, 2);
+	return (int) strtol(s, NULL, 2);
 }
 
 /***************************************************************/
@@ -110,31 +110,31 @@ int fromBinary(char *s)
 /***************************************************************/
 uint32_t mem_read_32(uint32_t address)
 {
-    int i;
-    int valid_flag = 0;
+	int i;
+	int valid_flag = 0;
 
-    for (i = 0; i < MEM_NREGIONS; i++) {
-	if (address >= MEM_REGIONS[i].start &&
-		address < (MEM_REGIONS[i].start + MEM_REGIONS[i].size)) {
-	    uint32_t offset = address - MEM_REGIONS[i].start;
+	for (i = 0; i < MEM_NREGIONS; i++) {
+		if (address >= MEM_REGIONS[i].start &&
+				address < (MEM_REGIONS[i].start + MEM_REGIONS[i].size)) {
+			uint32_t offset = address - MEM_REGIONS[i].start;
 
-	    valid_flag = 1;
+			valid_flag = 1;
 
-	    return
-		(MEM_REGIONS[i].mem[offset+3] << 24) |
-		(MEM_REGIONS[i].mem[offset+2] << 16) |
-		(MEM_REGIONS[i].mem[offset+1] <<  8) |
-		(MEM_REGIONS[i].mem[offset+0] <<  0);
+			return
+				(MEM_REGIONS[i].mem[offset+3] << 24) |
+				(MEM_REGIONS[i].mem[offset+2] << 16) |
+				(MEM_REGIONS[i].mem[offset+1] <<  8) |
+				(MEM_REGIONS[i].mem[offset+0] <<  0);
+		}
 	}
-    }
 
-    if (!valid_flag){
-	printf("Memory Read Error: Exceed memory boundary 0x%x\n", address);
-	exit(1);
-    }
+	if (!valid_flag){
+		printf("Memory Read Error: Exceed memory boundary 0x%x\n", address);
+		exit(1);
+	}
 
 
-    return 0;
+	return 0;
 }
 
 /***************************************************************/
@@ -146,27 +146,27 @@ uint32_t mem_read_32(uint32_t address)
 /***************************************************************/
 void mem_write_32(uint32_t address, uint32_t value)
 {
-    int i;
-    int valid_flag = 0;
+	int i;
+	int valid_flag = 0;
 
-    for (i = 0; i < MEM_NREGIONS; i++) {
-	if (address >= MEM_REGIONS[i].start &&
-		address < (MEM_REGIONS[i].start + MEM_REGIONS[i].size)) {
-	    uint32_t offset = address - MEM_REGIONS[i].start;
+	for (i = 0; i < MEM_NREGIONS; i++) {
+		if (address >= MEM_REGIONS[i].start &&
+				address < (MEM_REGIONS[i].start + MEM_REGIONS[i].size)) {
+			uint32_t offset = address - MEM_REGIONS[i].start;
 
-	    valid_flag = 1;
+			valid_flag = 1;
 
-	    MEM_REGIONS[i].mem[offset+3] = (value >> 24) & 0xFF;
-	    MEM_REGIONS[i].mem[offset+2] = (value >> 16) & 0xFF;
-	    MEM_REGIONS[i].mem[offset+1] = (value >>  8) & 0xFF;
-	    MEM_REGIONS[i].mem[offset+0] = (value >>  0) & 0xFF;
-	    return;
-	}	
-    }
-    if(!valid_flag){
-	printf("Memory Write Error: Exceed memory boundary 0x%x\n", address);
-	exit(1);
-    }
+			MEM_REGIONS[i].mem[offset+3] = (value >> 24) & 0xFF;
+			MEM_REGIONS[i].mem[offset+2] = (value >> 16) & 0xFF;
+			MEM_REGIONS[i].mem[offset+1] = (value >>  8) & 0xFF;
+			MEM_REGIONS[i].mem[offset+0] = (value >>  0) & 0xFF;
+			return;
+		}	
+	}
+	if(!valid_flag){
+		printf("Memory Write Error: Exceed memory boundary 0x%x\n", address);
+		exit(1);
+	}
 }
 
 /***************************************************************/
@@ -177,8 +177,8 @@ void mem_write_32(uint32_t address, uint32_t value)
 /*                                                             */
 /***************************************************************/
 void cycle() {                                                
-    process_instruction();
-    INSTRUCTION_COUNT++;
+	process_instruction();
+	INSTRUCTION_COUNT++;
 }
 
 /***************************************************************/
@@ -190,21 +190,25 @@ void cycle() {
 /***************************************************************/
 extern int run_i;
 void run(int num_cycles) {
-    
 
-    if (RUN_BIT == FALSE) {
-	printf("Can't simulate, Simulator is halted\n\n");
-	return;
-    }
 
-    printf("Simulating for %d instructions...\n\n", num_cycles);
-    for (run_i = 0; run_i < num_cycles;) {
 	if (RUN_BIT == FALSE) {
-	    printf("Simulator halted\n\n");
-	    break;
+		printf("Can't simulate, Simulator is halted\n\n");
+		return;
 	}
-	cycle();
-    }
+
+	printf("Simulating for %d instructions...\n\n", num_cycles);
+	for (run_i = 0; run_i < num_cycles;) {
+		if (RUN_BIT == FALSE) {
+			printf("Simulator halted\n\n");
+			break;
+		}
+		cycle();
+	}
+	if(run_i == num_cycles && RUN_BIT == FALSE)
+	{
+		printf("Simulator halted\n\n");
+	}
 }
 
 /***************************************************************/
@@ -215,15 +219,15 @@ void run(int num_cycles) {
 /*                                                             */
 /***************************************************************/
 void go() {
-    if (RUN_BIT == FALSE) {
-	printf("Can't simulate, Simulator is halted\n\n");
-	return;
-    }
+	if (RUN_BIT == FALSE) {
+		printf("Can't simulate, Simulator is halted\n\n");
+		return;
+	}
 
-    printf("Simulating...\n\n");
-    while (RUN_BIT)
-	cycle();
-    printf("Simulator halted\n\n");
+	printf("Simulating...\n\n");
+	while (RUN_BIT)
+		cycle();
+	printf("Simulator halted\n\n");
 }
 
 /***************************************************************/ 
@@ -235,13 +239,13 @@ void go() {
 /*                                                             */
 /***************************************************************/
 void mdump(int start, int stop) {          
-    int address;
+	int address;
 
-    printf("Memory content [0x%08x..0x%08x] :\n", start, stop);
-    printf("-------------------------------------\n");
-    for (address = start; address <= stop; address += 4)
-	printf("0x%08x: 0x%08x\n", address, mem_read_32(address));
-    printf("\n");
+	printf("Memory content [0x%08x..0x%08x] :\n", start, stop);
+	printf("-------------------------------------\n");
+	for (address = start; address <= stop; address += 4)
+		printf("0x%08x: 0x%08x\n", address, mem_read_32(address));
+	printf("\n");
 }
 
 /***************************************************************/
@@ -253,15 +257,15 @@ void mdump(int start, int stop) {
 /*                                                             */
 /***************************************************************/
 void rdump() {                               
-    int k; 
+	int k; 
 
-    printf("Current register values :\n");
-    printf("-------------------------------------\n");
-    printf("PC: 0x%08x\n", CURRENT_STATE.PC);
-    printf("Registers:\n");
-    for (k = 0; k < MIPS_REGS; k++)
-	printf("R%d: 0x%08x\n", k, CURRENT_STATE.REGS[k]);
-    printf("\n");
+	printf("Current register values :\n");
+	printf("-------------------------------------\n");
+	printf("PC: 0x%08x\n", CURRENT_STATE.PC);
+	printf("Registers:\n");
+	for (k = 0; k < MIPS_REGS; k++)
+		printf("R%d: 0x%08x\n", k, CURRENT_STATE.REGS[k]);
+	printf("\n");
 }
 
 /***************************************************************/
@@ -272,22 +276,22 @@ void rdump() {
 /*                                                             */
 /***************************************************************/
 void pdump() {                               
-    int k; 
+	int k; 
 
-    printf("Current pipeline PC state :\n");
-    printf("-------------------------------------\n");
-    printf("CYCLE %d:", INSTRUCTION_COUNT );
-    for(k = 0; k < 5; k++)
-    {
-    	if(CURRENT_STATE.PIPE[k])
-	    printf("0x%08x", CURRENT_STATE.PIPE[k]);
-	else
-	    printf("          ");
-	
-	if( k != PIPE_STAGE - 1 )
-	    printf("|");
-    }
-    printf("\n\n");
+	printf("Current pipeline PC state :\n");
+	printf("-------------------------------------\n");
+	printf("CYCLE %d:", INSTRUCTION_COUNT );
+	for(k = 0; k < 5; k++)
+	{
+		if(CURRENT_STATE.PIPE[k])
+			printf("0x%08x", CURRENT_STATE.PIPE[k]);
+		else
+			printf("          ");
+
+		if( k != PIPE_STAGE - 1 )
+			printf("|");
+	}
+	printf("\n\n");
 }
 
 /***************************************************************/
@@ -298,11 +302,11 @@ void pdump() {
 /*                                                             */
 /***************************************************************/
 void init_memory() {                                           
-    int i;
-    for (i = 0; i < MEM_NREGIONS; i++) {
-	MEM_REGIONS[i].mem = malloc(MEM_REGIONS[i].size);
-	memset(MEM_REGIONS[i].mem, 0, MEM_REGIONS[i].size);
-    }
+	int i;
+	for (i = 0; i < MEM_NREGIONS; i++) {
+		MEM_REGIONS[i].mem = malloc(MEM_REGIONS[i].size);
+		memset(MEM_REGIONS[i].mem, 0, MEM_REGIONS[i].size);
+	}
 }
 
 /***************************************************************/
@@ -314,18 +318,18 @@ void init_memory() {
 /***************************************************************/
 void init_inst_info()
 {
-    int i;
+	int i;
 
-    for(i = 0; i < NUM_INST; i++)
-    {
-	INST_INFO[i].value = 0;
-	INST_INFO[i].opcode = 0;
-	INST_INFO[i].func_code = 0;
-	INST_INFO[i].r_t.r_i.rs = 0;
-	INST_INFO[i].r_t.r_i.rt = 0;
-	INST_INFO[i].r_t.r_i.r_i.r.rd = 0;
-	INST_INFO[i].r_t.r_i.r_i.imm = 0;
-	INST_INFO[i].r_t.r_i.r_i.r.shamt = 0;
-	INST_INFO[i].r_t.target = 0;
-    }
+	for(i = 0; i < NUM_INST; i++)
+	{
+		INST_INFO[i].value = 0;
+		INST_INFO[i].opcode = 0;
+		INST_INFO[i].func_code = 0;
+		INST_INFO[i].r_t.r_i.rs = 0;
+		INST_INFO[i].r_t.r_i.rt = 0;
+		INST_INFO[i].r_t.r_i.r_i.r.rd = 0;
+		INST_INFO[i].r_t.r_i.r_i.imm = 0;
+		INST_INFO[i].r_t.r_i.r_i.r.shamt = 0;
+		INST_INFO[i].r_t.target = 0;
+	}
 }

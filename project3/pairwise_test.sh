@@ -10,7 +10,7 @@
 ./cs311test -f -n 10000 $1 > sol_f
 
 ./cs311sim -n 10000 $1 > out
-./cs311test -f -n 10000 $1 > sol
+./cs311test -n 10000 $1 > sol
 
 diff out_nobp_f sol_nobp_f > report/nobp_f
 diff out_nobp sol_nobp > report/nobp

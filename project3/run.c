@@ -594,4 +594,34 @@ void process_instruction(){
 			!CURRENT_STATE.EX_MEM.PC&&!CURRENT_STATE.MEM_WB.PC)
         || (num_inst_set && !num_inst))
 		RUN_BIT = FALSE;
+	else
+	{
+		//otherwise, why does it continue?
+		//int ii;
+		//for(ii=0;ii<5;ii++)
+		//{
+		//	//if(CURRENT_STATE.PIPE[ii]) break;
+		//	printf("PIPE[%d]: %x\n",ii, CURRENT_STATE.PIPE[ii]);
+		//}
+		//if(1)
+		//{
+		//	printf("it's because: \n");
+		//	printf("CURRENT_STATE.PC < MEM_REGIONS[0].start: %d\n",
+		//			CURRENT_STATE.PC < MEM_REGIONS[0].start);
+		//	printf("CURRENT_STATE.PC >= (MEM_REGIONS[0].start + (NUM_INST * 4)): %d\n",
+		//			CURRENT_STATE.PC >= (MEM_REGIONS[0].start + (NUM_INST * 4)));
+		//	printf("!CURRENT_STATE.IF_ID.PC: %d\n",
+		//			!CURRENT_STATE.IF_ID.PC);
+		//	printf("!CURRENT_STATE.ID_EX.PC: %d\n",
+		//			!CURRENT_STATE.ID_EX.PC);
+		//	printf("!CURRENT_STATE.EX_MEM.PC: %d\n",
+		//			!CURRENT_STATE.EX_MEM.PC);
+		//	printf("!CURRENT_STATE.MEM_WB.PC: %d\n",
+		//			!CURRENT_STATE.MEM_WB.PC);
+		//	printf("num_inst_set: %d\n",
+		//			num_inst_set);
+		//	printf("!num_inst: %d\n",
+		//			!num_inst);
+		//}
+	}
 }
