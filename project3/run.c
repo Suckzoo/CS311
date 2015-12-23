@@ -406,7 +406,8 @@ mem_wb_reg run_MEM()
 			mem_write_32(EX_MEM.ALUResult, EX_MEM.wrtData);
 	}
 	reg.PC = EX_MEM.PC;
-	reg.ALUResult = EX_MEM.ALUResult;
+	if(EX_MEM.cMemRd) reg.ALUResult = reg.memV;
+	else reg.ALUResult = EX_MEM.ALUResult;
 	reg.wrtReg = EX_MEM.wrtReg;
 	reg.cMem2Reg = EX_MEM.cMem2Reg;
 	reg.cRegWrt = EX_MEM.cRegWrt;
@@ -559,7 +560,7 @@ void process_instruction(){
 																// IF에 잡아두면 안되네 밀어줘야하네!
 			{
 	            CURRENT_STATE.pc_hold = 1;
-	            printf("bubble2: load-use\n");
+	            if(DEBUG) printf("bubble2: load-use\n");
 				IF_ID = run_BUBBLE();
 			}	
 			if(ID_EX.cALUOp == 7 || ID_EX.cALUOp == -1) // Jump
